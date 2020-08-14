@@ -156,7 +156,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	blockSize := 1024 * 1024
+	blockSize := 100000
 
 	err = setKeys(db, 100, 1000, blockSize)
 	if err != nil {
