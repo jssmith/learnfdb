@@ -85,8 +85,43 @@ func setKeysConcurrent(db fdb.Database, n, nKeys, size, nConcurrent int) error {
 		nComplete += n
 	}
 	elapsed := time.Now().Sub(start)
-	rate := float64(nComplete*nConcurrent) / elapsed.Seconds()
+	rate := float64(nComplete) / elapsed.Seconds()
 	log.Printf("concurrent set completed %d iterations with rate %f", n, rate)
+	return nil
+}
+
+func getKeysConcurrent(db fdb.Database, n, nKeys, nConcurrent int) error {
+	var wg sync.WaitGroup
+	start := time.Now()
+	wg.Add(nConcurrent)
+	completed := make([]int, nConcurrent)
+	for i := 0; i < nConcurrent; i++ {
+		go func(id int) {
+			defer wg.Done()
+			ct := 0
+			for i := 0; i < n; i++ {
+				mykey := fmt.Sprintf("hello-%d", rand.Intn(nKeys))
+				_, err := db.Transact(func(tr fdb.Transaction) (ret interface{}, e error) {
+					ret = tr.Get(fdb.Key(mykey)).MustGet()
+					return
+				})
+				if err != nil {
+					log.Printf("Error %v", err)
+					break
+				}
+				ct++
+			}
+			completed[id] = ct
+		}(i)
+	}
+	wg.Wait()
+	nComplete := 0
+	for _, n := range completed {
+		nComplete += n
+	}
+	elapsed := time.Now().Sub(start)
+	rate := float64(nComplete) / elapsed.Seconds()
+	log.Printf("concurrent get completed %d iterations with rate %f", n, rate)
 	return nil
 }
 
@@ -133,6 +168,13 @@ func main() {
 
 	for _, concurrency := range []int{16, 32} {
 		err = setKeysConcurrent(db, 1000, 1000, 1024, concurrency)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for _, concurrency := range []int{16, 32} {
+		err = getKeysConcurrent(db, 1000, 1000, concurrency)
 		if err != nil {
 			log.Fatal(err)
 		}
