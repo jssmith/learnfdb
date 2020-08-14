@@ -1,9 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -55,11 +58,13 @@ func setKeysConcurrent(db fdb.Database, n, nKeys, size, nConcurrent int) error {
 	start := time.Now()
 	wg.Add(nConcurrent)
 	completed := make([]int, nConcurrent)
+	completedBytes := make([]int64, nConcurrent)
 	for i := 0; i < nConcurrent; i++ {
 		go func(id int) {
 			defer wg.Done()
 			buf := make([]byte, size)
 			ct := 0
+			var byteCt int64
 			for i := 0; i < n; i++ {
 				rand.Read(buf)
 				mykey := fmt.Sprintf("hello-%d", rand.Intn(nKeys))
@@ -75,18 +80,24 @@ func setKeysConcurrent(db fdb.Database, n, nKeys, size, nConcurrent int) error {
 					break
 				}
 				ct++
+				byteCt += int64(len(buf))
 			}
 			completed[id] = ct
+			completedBytes[id] = byteCt
 		}(i)
 	}
 	wg.Wait()
-	nComplete := 0
-	for _, n := range completed {
-		nComplete += n
+	var nComplete int
+	var bytesComplete int64
+	for i := 0; i < nConcurrent; i++ {
+		nComplete += completed[i]
+		bytesComplete += completedBytes[i]
 	}
+
 	elapsed := time.Now().Sub(start)
 	rate := float64(nComplete) / elapsed.Seconds()
-	log.Printf("concurrent set completed %d iterations with rate %f", n, rate)
+	byteRate := float64(bytesComplete) / elapsed.Seconds()
+	log.Printf("concurrent set completed %d iterations with rate %f byte rate %f", n, rate, byteRate)
 	return nil
 }
 
@@ -95,13 +106,15 @@ func getKeysConcurrent(db fdb.Database, n, nKeys, nConcurrent int) error {
 	start := time.Now()
 	wg.Add(nConcurrent)
 	completed := make([]int, nConcurrent)
+	completedBytes := make([]int64, nConcurrent)
 	for i := 0; i < nConcurrent; i++ {
 		go func(id int) {
 			defer wg.Done()
 			ct := 0
+			var byteCt int64 = 0
 			for i := 0; i < n; i++ {
 				mykey := fmt.Sprintf("hello-%d", rand.Intn(nKeys))
-				_, err := db.Transact(func(tr fdb.Transaction) (ret interface{}, e error) {
+				r, err := db.Transact(func(tr fdb.Transaction) (ret interface{}, e error) {
 					ret = tr.Get(fdb.Key(mykey)).MustGet()
 					return
 				})
@@ -109,19 +122,25 @@ func getKeysConcurrent(db fdb.Database, n, nKeys, nConcurrent int) error {
 					log.Printf("Error %v", err)
 					break
 				}
+				byteCt += int64(len(r.([]byte)))
 				ct++
 			}
 			completed[id] = ct
+			completedBytes[id] = byteCt
 		}(i)
 	}
 	wg.Wait()
-	nComplete := 0
-	for _, n := range completed {
-		nComplete += n
+	var nComplete int
+	var bytesComplete int64
+	for i := 0; i < nConcurrent; i++ {
+		nComplete += completed[i]
+		bytesComplete += completedBytes[i]
 	}
+
 	elapsed := time.Now().Sub(start)
 	rate := float64(nComplete) / elapsed.Seconds()
-	log.Printf("concurrent get completed %d iterations with rate %f", n, rate)
+	byteRate := float64(bytesComplete) / elapsed.Seconds()
+	log.Printf("concurrent get completed %d iterations with rate %f byte rate %f", n, rate, byteRate)
 	return nil
 }
 
@@ -156,27 +175,49 @@ func main() {
 		log.Fatal(err)
 	}
 
-	blockSize := 100000
+	var numBlocks, blocksPerTask, blockSize int
+	var testRead, testWrite bool
+	var concurrencyStr string
 
-	err = setKeys(db, 100, 1000, blockSize)
-	if err != nil {
-		log.Fatal(err)
+	flag.IntVar(&numBlocks, "num-blocks", 1000, "total number of blocks")
+	flag.IntVar(&blocksPerTask, "blocks-per-task", 1000, "number of blocks per tas")
+	flag.IntVar(&blockSize, "block-size", 1024, "block size")
+	flag.StringVar(&concurrencyStr, "concurency", "10", "concurrency")
+
+	flag.BoolVar(&testRead, "read", true, "read test")
+	flag.BoolVar(&testWrite, "write", true, "write test")
+
+	flag.Parse()
+
+	var concurrencies []int
+
+	for _, cs := range strings.Split(concurrencyStr, ",") {
+		ci, err := strconv.Atoi(cs)
+		if err != nil {
+			log.Fatal(err)
+		}
+		concurrencies = append(concurrencies, ci)
 	}
 
-	err = getKeys(db, 100, 1000)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// err = setKeys(db, 100, 1000, blockSize)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	for _, concurrency := range []int{16, 32} {
-		err = setKeysConcurrent(db, 1000, 1000, blockSize, concurrency)
+	// err = getKeys(db, 100, 1000)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	for _, concurrency := range concurrencies {
+		err = setKeysConcurrent(db, blocksPerTask, numBlocks, blockSize, concurrency)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	for _, concurrency := range []int{16, 32} {
-		err = getKeysConcurrent(db, 1000, 1000, concurrency)
+	for _, concurrency := range concurrencies {
+		err = getKeysConcurrent(db, blocksPerTask, numBlocks, concurrency)
 		if err != nil {
 			log.Fatal(err)
 		}
