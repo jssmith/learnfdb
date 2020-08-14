@@ -182,7 +182,7 @@ func main() {
 	flag.IntVar(&numBlocks, "num-blocks", 1000, "total number of blocks")
 	flag.IntVar(&blocksPerTask, "blocks-per-task", 1000, "number of blocks per tas")
 	flag.IntVar(&blockSize, "block-size", 1024, "block size")
-	flag.StringVar(&concurrencyStr, "concurency", "10", "concurrency")
+	flag.StringVar(&concurrencyStr, "concurrency", "10", "concurrency")
 
 	flag.BoolVar(&testRead, "read", true, "read test")
 	flag.BoolVar(&testWrite, "write", true, "write test")
@@ -209,17 +209,21 @@ func main() {
 	// 	log.Fatal(err)
 	// }
 
-	for _, concurrency := range concurrencies {
-		err = setKeysConcurrent(db, blocksPerTask, numBlocks, blockSize, concurrency)
-		if err != nil {
-			log.Fatal(err)
+	if testWrite {
+		for _, concurrency := range concurrencies {
+			err = setKeysConcurrent(db, blocksPerTask, numBlocks, blockSize, concurrency)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 
-	for _, concurrency := range concurrencies {
-		err = getKeysConcurrent(db, blocksPerTask, numBlocks, concurrency)
-		if err != nil {
-			log.Fatal(err)
+	if testRead {
+		for _, concurrency := range concurrencies {
+			err = getKeysConcurrent(db, blocksPerTask, numBlocks, concurrency)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 
