@@ -156,7 +156,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = setKeys(db, 100, 1000, 1024)
+	blockSize := 1024 * 1024
+
+	err = setKeys(db, 100, 1000, blockSize)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -167,7 +169,7 @@ func main() {
 	}
 
 	for _, concurrency := range []int{16, 32} {
-		err = setKeysConcurrent(db, 1000, 1000, 1024, concurrency)
+		err = setKeysConcurrent(db, 1000, 1000, blockSize, concurrency)
 		if err != nil {
 			log.Fatal(err)
 		}
