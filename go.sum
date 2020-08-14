@@ -1,0 +1,8 @@
+github.com/apple/foundationdb v0.0.0-20200605000326-4f24dd7bd068 h1:5F6IY8vTP64Zd3wRbgqrsd4zwolz+23hGvvpjhVMo8E=
+github.com/apple/foundationdb v0.0.0-20200810185914-4c4df7b2a018 h1:ow6L2cT+cKW0rv9XI1GT5dU96P0Yrhwk+B6znR5t1jM=
+github.com/apple/foundationdb/bindings/go v0.0.0-20200605000326-4f24dd7bd068 h1:aIa6GLGrEWgraVCfuPWuhxOTTbI/x9ClAmaKLrAD9iM=
+github.com/apple/foundationdb/bindings/go v0.0.0-20200605000326-4f24dd7bd068/go.mod h1:OMVSB21p9+xQUIqlGizHPZfjK+SHws1ht+ZytVDoz9U=
+github.com/apple/foundationdb/bindings/go v0.0.0-20200810185914-4c4df7b2a018 h1:O5bY/9sHRR0qJZfx8tB4F13+pipFYWiJDEGzDXoh0Uk=
+github.com/apple/foundationdb/bindings/go v0.0.0-20200810185914-4c4df7b2a018/go.mod h1:OMVSB21p9+xQUIqlGizHPZfjK+SHws1ht+ZytVDoz9U=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
